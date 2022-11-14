@@ -26,18 +26,41 @@ func main() {
 	screen := NewScreen()
 
 	var width, height uint
-	fmt.Print("insert width: ")
-	fmt.Scan(&width)
-	fmt.Print("insert height: ")
-	fmt.Scan(&height)
-
 	delay := time.Millisecond
-	fmt.Println("Select speed: ")
-	switch menu([]string{"SLOW", "MEDIUM", "FAST", "SONIC"}) {
-	case 0: delay *= 120
-	case 1: delay *= 95
-	case 2: delay *= 70
-	case 3: delay *= 50
+
+	for {
+		var tmp string
+		fmt.Print("Do you want default settings [Y/N]: ")
+		fmt.Scan(&tmp)
+		if tmp == "Y" || tmp == "y" {
+			fmt.Print("You have selected auto settings:\n")
+			width = 40
+			height = 40
+			delay *= 1000
+			break
+		} else if tmp == "N" || tmp == "n" {
+			fmt.Print("You have selected manual settings:\n")
+			fmt.Print("insert width: ")
+			fmt.Scan(&width)
+			fmt.Print("insert height: ")
+			fmt.Scan(&height)
+
+			delay = time.Millisecond
+			fmt.Println("Select speed: ")
+			switch menu([]string{"SLOW", "MEDIUM", "FAST", "SONIC"}) {
+			case 0:
+				delay *= 120
+			case 1:
+				delay *= 95
+			case 2:
+				delay *= 70
+			case 3:
+				delay *= 50
+			}
+			break
+		} else {
+			fmt.Print("You have insert a invalid input, please retry.\ns")
+		}
 	}
 
 	snakeGame := NewSnakeGame(&screen, width, height, delay)
