@@ -35,7 +35,7 @@ func NewSnakeGame(screen *Screen, width, height uint, delay time.Duration) Snake
 
 	fruit := NewPos(rand.Intn(int(width)), rand.Intn(int(height)))
 
-	screen.SetDrawingFlags()
+	screen.StartInputReading()
 
 	return SnakeGame{
 		myRand: rand.New(source),
@@ -129,17 +129,20 @@ func (this *SnakeGame) draw() {
 }
 
 func (this *SnakeGame) RunGameLoop() {
+	frameCount := 0
 	for {
 		this.draw()
+		oldDirection := this.direction
 		this.screen.ReadInput(func(k Keycode) {
 			switch k {
-			case Up: if this.direction != DOWN { this.direction = UP }
-			case Down: if this.direction != UP { this.direction = DOWN }
-			case Left: if this.direction != RIGHT { this.direction = LEFT }
-			case Right: if this.direction != LEFT { this.direction = RIGHT }
+			case Up: if oldDirection != DOWN { this.direction = UP }
+			case Down: if oldDirection != UP { this.direction = DOWN }
+			case Left: if oldDirection != RIGHT { this.direction = LEFT }
+			case Right: if oldDirection != LEFT { this.direction = RIGHT }
 			}
 		})
 		dead := this.update()
 		if dead { break; }
+		frameCount++
 	}
 }
