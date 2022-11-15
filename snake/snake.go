@@ -51,6 +51,7 @@ type SnakeGame struct {
 	width, height uint
 	delay time.Duration
 	lastFrame time.Time
+	tailDirection Direction
 	snake []snakeSegment
 	fruit Pos
 }
@@ -72,6 +73,7 @@ func NewSnakeGame(screen *Screen, width, height uint, delay time.Duration) Snake
 		height: height,
 		delay: delay,
 		lastFrame: time.Now(),
+		tailDirection: LEFT,
 		snake: snake,
 		fruit: fruit,
 	}
@@ -106,6 +108,10 @@ func (this *SnakeGame) update() (dead bool) {
 		this.snake = append(this.snake, snakeSegment{NewPos(0, 0), head.direction})
 		copy(this.snake[1:], this.snake[0:])
 	} else {
+		// Save the old tail direction,
+		// so that the tail can be drawn correctly
+		this.tailDirection = this.snake[len(this.snake)-1].direction
+
 		// Move the snake, by traslating all the positions
 		// and discarding the last one
 		if len(this.snake) > 1 {
@@ -143,7 +149,7 @@ func (this *SnakeGame) draw() {
 		if i != len(this.snake) - 1 {
 			prevDir = this.snake[i + 1].direction
 		} else {
-			prevDir = curDir
+			prevDir = this.tailDirection
 		}
 
 		this.screen.PutString(snakeCharset[curDir][prevDir], pos)
