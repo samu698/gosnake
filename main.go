@@ -36,7 +36,7 @@ func main() {
 			fmt.Print("You have selected auto settings:\n")
 			width = 40
 			height = 40
-			delay *= 1000
+			delay *= 120
 			break
 		} else if tmp == "N" || tmp == "n" {
 			fmt.Print("You have selected manual settings:\n")
