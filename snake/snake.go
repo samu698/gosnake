@@ -170,8 +170,16 @@ func (this *SnakeGame) draw() {
 	this.lastFrame = this.screen.Draw(this.delay, this.lastFrame)
 }
 
+func (this *SnakeGame) RunWithInputs(inputs []Direction) {
+	this.snake[0].direction = inputs[0]
+	for _, direction := range inputs[1:] {
+		this.draw()
+		this.snake[0].direction = direction
+		dead := this.update()
+		if dead { return }
+	}
+}
 func (this *SnakeGame) RunGameLoop() {
-	frameCount := 0
 	for {
 		this.draw()
 		oldDirection := this.snake[0].direction
@@ -186,6 +194,5 @@ func (this *SnakeGame) RunGameLoop() {
 		})
 		dead := this.update()
 		if dead { break; }
-		frameCount++
 	}
 }
