@@ -18,14 +18,14 @@ var letterE1 = []Direction{LEFT, LEFT, LEFT, LEFT, DOWN, DOWN, RIGHT, RIGHT, RIG
 var letterE2 = []Direction{LEFT, LEFT, LEFT, LEFT, UP}
 
 var paths = []Path {
-	{ NewPos(20, 20), letterS },
-	{ NewPos(25, 20), letterN },
-	{ NewPos(31, 20), letterA1 },
-	{ NewPos(33, 18), letterA2 },
-	{ NewPos(36, 20), letterK1 },
-	{ NewPos(39, 16), letterK2 },
-	{ NewPos(44, 16), letterE1 },
-	{ NewPos(44, 20), letterE2 },
+	{ StartingPos: NewPos(20, 15), Path: letterS },
+	{ StartingPos: NewPos(25, 15), Path: letterN },
+	{ StartingPos: NewPos(31, 15), Path: letterA1 },
+	{ StartingPos: NewPos(33, 13), Path: letterA2 },
+	{ StartingPos: NewPos(36, 15), Path: letterK1 },
+	{ StartingPos: NewPos(39, 11), Path: letterK2 },
+	{ StartingPos: NewPos(44, 11), Path: letterE1 },
+	{ StartingPos: NewPos(44, 15), Path: letterE2 },
 }
 
 type MenuEntry interface {
@@ -98,6 +98,7 @@ func NewGameMenu(screen *Screen, entries []MenuEntry) GameMenu {
 		screen: screen,
 		entries: entries,
 		selectedIndex: 0,
+		puppeteer: NewPuppeteer(screen, paths),
 	}
 }
 
@@ -111,6 +112,7 @@ func (this *GameMenu) Update() {
 			this.entries[this.selectedIndex].onKey(k)
 		}
 	})
+	this.puppeteer.Update()
 }
 
 func (this *GameMenu) Draw() {
@@ -121,6 +123,7 @@ func (this *GameMenu) Draw() {
 			entryStr = "> " + entryStr + " <"
 		}
 		xPos := (this.screen.GetSize().X - len(entryStr)) / 2
-		this.screen.PutString(entryStr, NewPos(xPos, i + 1))
+		this.screen.PutString(entryStr, NewPos(xPos, i + 20))
 	}
+	this.puppeteer.Draw()
 }
