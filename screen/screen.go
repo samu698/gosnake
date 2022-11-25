@@ -33,6 +33,8 @@ func NewScreen() Screen {
 	termios, _ := unix.IoctlGetTermios(int(os.Stdin.Fd()), unix.TCGETS)
 	fdFlags, _ := unix.FcntlInt(os.Stdin.Fd(), unix.F_GETFL, 0)
 
+	fmt.Print("\x1B[?1049h") // Enter alternate screen
+
 	return Screen{
 		width: uint(winsize.Col),
 		height: uint(winsize.Row),
@@ -79,4 +81,9 @@ func (this *Screen) Swap(frameTime time.Duration, lastFrame time.Time) time.Time
 
 	time.Sleep(time.Until(lastFrame.Add(frameTime)))
 	return time.Now()
+}
+
+func (this *Screen) Restore() {
+	fmt.Print("\x1B[?1049l") // Exit alternate screen
+	this.StopInputReading()
 }

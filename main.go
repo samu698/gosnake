@@ -76,8 +76,10 @@ func main() {
 	snakeGame := NewSnakeGame(&screen, config)
 	snakeGame.Draw()
 	for {
-		if snakeGame.Update() { return }
+		if snakeGame.Update() { break }
 		snakeGame.Draw()
 		lastFrame = screen.Swap(frameDelayMs, lastFrame)
 	}
+
+	screen.Restore()
 }
