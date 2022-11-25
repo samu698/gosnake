@@ -64,7 +64,7 @@ func (this *Screen) PutString(str string, pos Pos) {
 	}
 }
 
-func (this *Screen) Draw(frameTime time.Duration, lastFrame time.Time) time.Time {
+func (this *Screen) Swap(frameTime time.Duration, lastFrame time.Time) time.Time {
 	if this.clearRequested {
 		fmt.Printf("\x1B[2J")
 	}
