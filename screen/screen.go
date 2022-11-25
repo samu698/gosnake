@@ -45,6 +45,10 @@ func NewScreen() Screen {
 	}
 }
 
+func (this *Screen) GetSize() Pos {
+	return NewPos(this.width, this.height)
+}
+
 func (this *Screen) Clear() {
 	this.drawQueue = this.drawQueue[:0]
 	this.clearRequested = true
