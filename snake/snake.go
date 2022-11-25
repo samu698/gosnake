@@ -16,12 +16,31 @@ const (
 	DOWN
 )
 
+type SnakeGame struct {
+	myRand *rand.Rand
+	screen *Screen
+	tailDirection Direction
+	snake []snakeSegment
+	fruit Pos
+	Config SnakeConfig
+}
+
+type SnakeConfig struct {
+	StartDirection Direction
+	Size, Origin Pos
+	CheckBounds bool
+	DrawBorder bool
+	SpawnFruit bool
+	GrowOnFrame bool
+	ClearScreen bool
+}
+
 // map[myDir][prevDir]
 var snakeCharset = map[Direction]map[Direction]string {
 	LEFT: {
 		LEFT: "══",
-		UP: "╗",
-		DOWN: "╝",
+		UP: "╗ ",
+		DOWN: "╝ ",
 	},
 	RIGHT: {
 		RIGHT: "══",
@@ -29,14 +48,14 @@ var snakeCharset = map[Direction]map[Direction]string {
 		DOWN: "╚═",
 	},
 	UP: {
-		UP: "║",
+		UP: "║ ",
 		LEFT: "╚═",
-		RIGHT: "╝",
+		RIGHT: "╝ ",
 	},
 	DOWN: {
-		DOWN: "║",
+		DOWN: "║ ",
 		LEFT: "╔═",
-		RIGHT: "╗",
+		RIGHT: "╗ ",
 	},
 }
 
@@ -45,44 +64,36 @@ type snakeSegment struct {
 	direction Direction
 }
 
-type SnakeGame struct {
-	myRand *rand.Rand
-	screen *Screen
-	width, height uint
-	delay time.Duration
-	lastFrame time.Time
-	tailDirection Direction
-	snake []snakeSegment
-	fruit Pos
-}
-
-func NewSnakeGame(screen *Screen, width, height uint, delay time.Duration) SnakeGame {
+func NewSnakeGame(screen *Screen, config SnakeConfig) SnakeGame {
 	source := rand.NewSource(time.Now().UnixNano())
+	myRand := rand.New(source)
 
 	snake := make([]snakeSegment, 1)
-	snake[0] = snakeSegment{NewPos(width / 2, height / 2), LEFT}
+	snake[0] = snakeSegment{config.Origin, config.StartDirection}
 
-	fruit := NewPos(rand.Intn(int(width)), rand.Intn(int(height)))
+	var fruit Pos
+	if config.SpawnFruit {
+		fruit = NewPos(myRand.Intn(config.Size.X), myRand.Intn(config.Size.Y))
+	} else {
+		fruit = NewPos(-1, -1)
+	}
 
 	screen.StartInputReading()
 
 	return SnakeGame{
-		myRand: rand.New(source),
+		myRand: myRand,
 		screen: screen,
-		width: width,
-		height: height,
-		delay: delay,
-		lastFrame: time.Now(),
-		tailDirection: LEFT,
+		tailDirection: config.StartDirection,
 		snake: snake,
 		fruit: fruit,
+		Config: config,
 	}
 }
 
 func (this *SnakeGame) randomFruit() (fruit Pos) {
 	outer:
 	for {
-		fruit = NewPos(rand.Intn(int(this.width)), rand.Intn(int(this.height)))
+		fruit = NewPos(this.myRand.Intn(this.Config.Size.X), this.myRand.Intn(this.Config.Size.Y))
 		for _, s := range this.snake {
 			if fruit.Equal(s.pos) { continue outer }
 		}
@@ -90,7 +101,9 @@ func (this *SnakeGame) randomFruit() (fruit Pos) {
 	}
 }
 
-func (this *SnakeGame) update() (dead bool) {
+func (this *SnakeGame) UpdateWithInput(direction Direction) (dead bool) {
+	this.snake[0].direction = direction
+
 	head := this.snake[0]
 
 	switch head.direction {
@@ -100,8 +113,10 @@ func (this *SnakeGame) update() (dead bool) {
 	case DOWN: head.pos.Addv(0, +1)
 	}
 
-	if (head.pos.Equal(this.fruit)) {
-		this.fruit = this.randomFruit()
+	if this.Config.GrowOnFrame || head.pos.Equal(this.fruit) {
+		if this.Config.SpawnFruit {
+			this.fruit = this.randomFruit()
+		}
 
 		// If the snake has grown
 		// we can simply insert the new head into the slice
@@ -121,22 +136,43 @@ func (this *SnakeGame) update() (dead bool) {
 		// Check if the snake collided with itself
 		// This check is not done when the snake eats the fruit
 		// because they cannot spawn into the snake
-		for _, v := range this.snake {
-			if v.pos.Equal(head.pos) {
-				dead = true
-				return
+		if this.Config.CheckBounds {
+			for _, v := range this.snake {
+				if v.pos.Equal(head.pos) {
+					dead = true
+					return
+				}
 			}
 		}
 	}
 
 	this.snake[0] = head
 
-	dead = !head.pos.IsInside(NewPos(0, 0), NewPos(this.width - 1, this.height - 1))
+	dead = !head.pos.IsInside(NewPos(0, 0), NewPos(this.Config.Size.X - 1, this.Config.Size.Y - 1))
+	return
+
+}
+func (this *SnakeGame) Update() (dead bool) {
+	oldDirection := this.snake[0].direction
+	newDirection := oldDirection
+
+	this.screen.ReadInput(func(k Keycode) {
+		switch k {
+		case Up: if oldDirection != DOWN { newDirection = UP }
+		case Down: if oldDirection != UP { newDirection = DOWN }
+		case Left: if oldDirection != RIGHT { newDirection = LEFT }
+		case Right: if oldDirection != LEFT { newDirection = RIGHT }
+		}
+	})
+
+	dead = this.UpdateWithInput(newDirection)
 	return
 }
 
-func (this *SnakeGame) draw() {
-	this.screen.Clear()
+func (this *SnakeGame) Draw() {
+	if this.Config.ClearScreen {
+		this.screen.Clear()
+	}
 
 	for i := 0; i < len(this.snake); i++ {
 		pos := this.snake[i].pos
@@ -155,44 +191,18 @@ func (this *SnakeGame) draw() {
 		this.screen.PutString(snakeCharset[curDir][prevDir], pos)
 	}
 
-	fruitPos := NewPos(this.fruit.X * 2 + 1, this.fruit.Y + 1)
-
-	this.screen.PutChar('\u2299', fruitPos)
-
-	this.screen.PutString(strings.Repeat("-", int(2 * this.width + 2)), NewPos(0, 0))
-	this.screen.PutString(strings.Repeat("-", int(2 * this.width + 2)), NewPos(0, this.height + 1))
-
-	for y:= uint(1); y < this.width + 1; y++ {
-		this.screen.PutChar('|', NewPos(0, y))
-		this.screen.PutChar('|', NewPos(2 * this.width + 1, y))
+	if this.fruit.X != -1 && this.fruit.Y != -1 {
+		fruitPos := NewPos(this.fruit.X * 2 + 1, this.fruit.Y + 1)
+		this.screen.PutChar('\u2299', fruitPos)
 	}
 
-	this.lastFrame = this.screen.Draw(this.delay, this.lastFrame)
-}
+	if this.Config.DrawBorder {
+		this.screen.PutString(strings.Repeat("-", 2 * this.Config.Size.X + 2), NewPos(0, 0))
+		this.screen.PutString(strings.Repeat("-", 2 * this.Config.Size.X + 2), NewPos(0, this.Config.Size.Y + 1))
 
-func (this *SnakeGame) RunWithInputs(inputs []Direction) {
-	this.snake[0].direction = inputs[0]
-	for _, direction := range inputs[1:] {
-		this.draw()
-		this.snake[0].direction = direction
-		dead := this.update()
-		if dead { return }
-	}
-}
-func (this *SnakeGame) RunGameLoop() {
-	for {
-		this.draw()
-		oldDirection := this.snake[0].direction
-		direction := &this.snake[0].direction
-		this.screen.ReadInput(func(k Keycode) {
-			switch k {
-			case Up: if oldDirection != DOWN { *direction = UP }
-			case Down: if oldDirection != UP { *direction = DOWN }
-			case Left: if oldDirection != RIGHT { *direction = LEFT }
-			case Right: if oldDirection != LEFT { *direction = RIGHT }
-			}
-		})
-		dead := this.update()
-		if dead { break; }
+		for y:= 1; y < this.Config.Size.Y + 1; y++ {
+			this.screen.PutChar('|', NewPos(0, y))
+			this.screen.PutChar('|', NewPos(2 * this.Config.Size.X + 1, y))
+		}
 	}
 }
